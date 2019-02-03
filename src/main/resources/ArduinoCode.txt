@@ -1,0 +1,69 @@
+#include<ESP8266HTTPClient.h>
+#include<ESP8266WiFi.h>
+#include<DHT.h>
+
+//Define which controller is using
+#define DHTTYPE DHT22
+
+//GPIO pin on ESP8266, default D1 = 5
+const
+    int DHTPin = 5;
+
+    DHT dht(DHTPin, DHTTYPE);
+
+    void setup() {
+        //Serial connection bandwitch
+        Serial.begin(115200);
+        //WiFi connection, login and password    
+        WiFi.begin("WifiName", "password");
+        //Activates DHT sensor
+        dht.begin();
+
+        //Wait for the WiFI connection completion
+        while (WiFi.status() != WL_CONNECTED) {
+            delay(2000);
+            Serial.println("Waiting for connection");
+        }
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("Connection UP");
+        }
+    }
+
+    void loop() {
+        //Check WiFi connection status every loop repeat
+        if (WiFi.status() == WL_CONNECTED) {
+            //Declare object of class HTTPClient   
+            HTTPClient http;
+            //Specify content-type header
+            http.addHeader("Content-Type", "text/plain");
+
+            //Reads temperature and humidity
+            double temperature = dht.readTemperature();
+            double humidity = dht.readHumidity();
+
+            //Create output String
+            String begins = "http://192.168.1.3:8080/sensor?temperature=";
+            String afters = "&humidity=";
+            String result = begins + temperature + afters + humidity;
+
+            //Specify request destination
+            http.begin(result);
+            //Send the request
+            int httpCode = http.POST("");
+            //Get the response payload
+            String payload = http.getString();
+            //Print HTTP return code, if 200 its OK
+            Serial.println(httpCode);
+            //Print request response payload
+            Serial.println(payload);  
+            Serial.println(temperature);
+            Serial.println(humidity);
+
+            //Close connection
+            http.end();  
+        } else {
+            Serial.println("Error in WiFi connection");
+        }
+        //Send a request every 10 seconds
+        delay(30000);  
+    }
